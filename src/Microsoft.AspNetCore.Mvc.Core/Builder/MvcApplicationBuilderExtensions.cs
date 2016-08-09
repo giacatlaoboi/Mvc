@@ -2,11 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Core;
-using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -110,7 +107,6 @@ namespace Microsoft.AspNetCore.Builder
             var nestedAppBuilder = app.New();
             childPipeline(nestedAppBuilder);
 
-
             var options = app.ApplicationServices.GetRequiredService<IOptions<MvcOptions>>();
             options.Value.Filters.Add(new MiddlewarePipelineResourceFilter(nestedAppBuilder));
 
@@ -144,57 +140,6 @@ namespace Microsoft.AspNetCore.Builder
             routes.Routes.Insert(0, AttributeRouting.CreateAttributeMegaRoute(app.ApplicationServices));
 
             return app.UseRouter(routes.Build());
-        }
-
-    }
-
-    class MiddlewarePipelineResourceFilter : IAsyncResourceFilter
-    {
-        private readonly RequestDelegate _requestDelegate;
-
-        public MiddlewarePipelineResourceFilter(IApplicationBuilder appBuilder)
-        {
-            if (appBuilder == null)
-            {
-                throw new ArgumentNullException(nameof(appBuilder));
-            }
-
-            appBuilder.Run((httpContext) =>
-            {
-                var filterContext = httpContext.Items["_ResourceFilterContext"] as ResourceFilterContext;
-                var resourceExecutionDelegate = filterContext.ResourceExecutionDelegate;
-
-                if (!httpContext.Response.HasStarted)
-                {
-                    return resourceExecutionDelegate();
-                }
-
-                return TaskCache.CompletedTask;
-            });
-
-            _requestDelegate = appBuilder.Build();
-        }
-
-        public Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
-        {
-            var httpContext = context.HttpContext;
-
-            httpContext.Items.Add(
-                "_ResourceFilterContext",
-                new ResourceFilterContext()
-                {
-                    ResourceExecutionDelegate = next,
-                    ResourceExecutingContext = context
-                });
-
-            return _requestDelegate(httpContext);
-        }
-
-        private class ResourceFilterContext
-        {
-            public ResourceExecutingContext ResourceExecutingContext { get; set; }
-
-            public ResourceExecutionDelegate ResourceExecutionDelegate { get; set; }
         }
     }
 }
