@@ -2,10 +2,15 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Core;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Builder
 {
@@ -95,6 +100,77 @@ namespace Microsoft.AspNetCore.Builder
             routes.Routes.Insert(0, AttributeRouting.CreateAttributeMegaRoute(app.ApplicationServices));
 
             return app.UseRouter(routes.Build());
+        }
+
+        public static IApplicationBuilder UseMvcWithMiddleware(
+            this IApplicationBuilder app,
+            Action<IApplicationBuilder> childPipeline,
+            Action<IRouteBuilder> configureRoutes)
+        {
+            var nestedAppBuilder = app.New();
+            childPipeline(nestedAppBuilder);
+
+            var options = app.ApplicationServices.GetRequiredService<IOptions<MvcOptions>>();
+            options.Value.Filters.Add(new MiddlewarePipelineResourceFilter(nestedAppBuilder.Build()));
+
+            if (app == null)
+            {
+                throw new ArgumentNullException(nameof(app));
+            }
+
+            if (configureRoutes == null)
+            {
+                throw new ArgumentNullException(nameof(configureRoutes));
+            }
+
+            // Verify if AddMvc was done before calling UseMvc
+            // We use the MvcMarkerService to make sure if all the services were added.
+            if (app.ApplicationServices.GetService(typeof(MvcMarkerService)) == null)
+            {
+                throw new InvalidOperationException(Resources.FormatUnableToFindServices(
+                    nameof(IServiceCollection),
+                    "AddMvc",
+                    "ConfigureServices(...)"));
+            }
+
+            var routes = new RouteBuilder(app)
+            {
+                DefaultHandler = app.ApplicationServices.GetRequiredService<MvcRouteHandler>(),
+            };
+
+            configureRoutes(routes);
+
+            routes.Routes.Insert(0, AttributeRouting.CreateAttributeMegaRoute(app.ApplicationServices));
+
+            return app.UseRouter(routes.Build());
+        }
+
+    }
+
+    public class MiddlewarePipelineResourceFilter : IAsyncResourceFilter
+    {
+        private readonly RequestDelegate _requestDelegate;
+
+        public MiddlewarePipelineResourceFilter(RequestDelegate requestDelegate)
+        {
+            if (requestDelegate == null)
+            {
+                throw new ArgumentNullException(nameof(requestDelegate));
+            }
+
+            _requestDelegate = requestDelegate;
+        }
+
+        public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
+        {
+            var httpContext = context.HttpContext;
+
+            await _requestDelegate(httpContext);
+
+            if (!httpContext.Response.HasStarted)
+            {
+                await next();
+            }
         }
     }
 }

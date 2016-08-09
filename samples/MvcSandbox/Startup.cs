@@ -1,13 +1,17 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Routing;
 
 namespace MvcSandbox
 {
@@ -19,7 +23,7 @@ namespace MvcSandbox
             services.AddMvc();
 
             services.Insert(0, ServiceDescriptor.Singleton(
-                typeof(IConfigureOptions<AntiforgeryOptions>), 
+                typeof(IConfigureOptions<AntiforgeryOptions>),
                 new ConfigureOptions<AntiforgeryOptions>(options => options.CookieName = "<choose a name>")));
         }
 
@@ -28,13 +32,37 @@ namespace MvcSandbox
         {
             app.UseDeveloperExceptionPage();
             app.UseStaticFiles();
-            loggerFactory.AddConsole();
-            app.UseMvc(routes =>
-            {
-                routes.MapRoute(
-                    name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
-            });
+            loggerFactory.AddConsole(LogLevel.Debug);
+            //app.UseMvc(routes =>
+            //{
+            //    routes.MapRoute(
+            //        name: "default",
+            //        template: "{controller=Home}/{action=Index}/{id?}");
+            //});
+
+            app.UseMvcWithMiddleware(
+                (childApp) =>
+                {
+                    childApp.Use(async (httpContext, next) =>
+                    {
+                        Console.WriteLine("Use1-Request");
+                        await next();
+                        Console.WriteLine("Use1-Response");
+                    });
+
+                    childApp.Use(async (httpContext, next) =>
+                    {
+                        Console.WriteLine("Use2-Request");
+                        await next();
+                        Console.WriteLine("Use2-Response");
+                    });
+                },
+                routes =>
+                {
+                    routes.MapRoute(
+                        name: "default",
+                        template: "{controller=Home}/{action=Index}/{id?}");
+                });
         }
 
         public static void Main(string[] args)
