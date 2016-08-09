@@ -110,8 +110,9 @@ namespace Microsoft.AspNetCore.Builder
             var nestedAppBuilder = app.New();
             childPipeline(nestedAppBuilder);
 
+
             var options = app.ApplicationServices.GetRequiredService<IOptions<MvcOptions>>();
-            options.Value.Filters.Add(new MiddlewarePipelineResourceFilter(nestedAppBuilder.Build()));
+            options.Value.Filters.Add(new MiddlewarePipelineResourceFilter(nestedAppBuilder));
 
             if (app == null)
             {
@@ -147,30 +148,53 @@ namespace Microsoft.AspNetCore.Builder
 
     }
 
-    public class MiddlewarePipelineResourceFilter : IAsyncResourceFilter
+    class MiddlewarePipelineResourceFilter : IAsyncResourceFilter
     {
         private readonly RequestDelegate _requestDelegate;
 
-        public MiddlewarePipelineResourceFilter(RequestDelegate requestDelegate)
+        public MiddlewarePipelineResourceFilter(IApplicationBuilder appBuilder)
         {
-            if (requestDelegate == null)
+            if (appBuilder == null)
             {
-                throw new ArgumentNullException(nameof(requestDelegate));
+                throw new ArgumentNullException(nameof(appBuilder));
             }
 
-            _requestDelegate = requestDelegate;
+            appBuilder.Run((httpContext) =>
+            {
+                var filterContext = httpContext.Items["_ResourceFilterContext"] as ResourceFilterContext;
+                var resourceExecutionDelegate = filterContext.ResourceExecutionDelegate;
+
+                if (!httpContext.Response.HasStarted)
+                {
+                    return resourceExecutionDelegate();
+                }
+
+                return TaskCache.CompletedTask;
+            });
+
+            _requestDelegate = appBuilder.Build();
         }
 
-        public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
+        public Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
         {
             var httpContext = context.HttpContext;
 
-            await _requestDelegate(httpContext);
+            httpContext.Items.Add(
+                "_ResourceFilterContext",
+                new ResourceFilterContext()
+                {
+                    ResourceExecutionDelegate = next,
+                    ResourceExecutingContext = context
+                });
 
-            if (!httpContext.Response.HasStarted)
-            {
-                await next();
-            }
+            return _requestDelegate(httpContext);
+        }
+
+        private class ResourceFilterContext
+        {
+            public ResourceExecutingContext ResourceExecutingContext { get; set; }
+
+            public ResourceExecutionDelegate ResourceExecutionDelegate { get; set; }
         }
     }
 }
