@@ -40,16 +40,16 @@ namespace MvcSandbox
             //});
 
             app.UseMvcWithMiddleware(
-                (childApp) =>
+                (nestedAppBuilder) =>
                 {
-                    childApp.Use(async (httpContext, next) =>
+                    nestedAppBuilder.Use(async (httpContext, next) =>
                     {
                         Console.WriteLine("Use1-Request");
                         await next();
                         Console.WriteLine("Use1-Response");
                     });
 
-                    childApp.Use(async (httpContext, next) =>
+                    nestedAppBuilder.Use(async (httpContext, next) =>
                     {
                         Console.WriteLine("Use2-Request");
                         await next();
