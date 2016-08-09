@@ -101,24 +101,29 @@ namespace Microsoft.AspNetCore.Builder
 
         public static IApplicationBuilder UseMvcWithMiddleware(
             this IApplicationBuilder app,
-            Action<IApplicationBuilder> childPipeline,
+            Action<IApplicationBuilder> middlewarePipeline,
             Action<IRouteBuilder> configureRoutes)
         {
-            var nestedAppBuilder = app.New();
-            childPipeline(nestedAppBuilder);
-
-            var options = app.ApplicationServices.GetRequiredService<IOptions<MvcOptions>>();
-            options.Value.Filters.Add(new MiddlewarePipelineResourceFilter(nestedAppBuilder));
-
             if (app == null)
             {
                 throw new ArgumentNullException(nameof(app));
+            }
+
+            if (middlewarePipeline == null)
+            {
+                throw new ArgumentNullException(nameof(middlewarePipeline));
             }
 
             if (configureRoutes == null)
             {
                 throw new ArgumentNullException(nameof(configureRoutes));
             }
+
+            var nestedAppBuilder = app.New();
+            middlewarePipeline(nestedAppBuilder);
+
+            var options = app.ApplicationServices.GetRequiredService<IOptions<MvcOptions>>();
+            options.Value.Filters.Add(new MiddlewarePipelineResourceFilter(nestedAppBuilder));
 
             // Verify if AddMvc was done before calling UseMvc
             // We use the MvcMarkerService to make sure if all the services were added.
