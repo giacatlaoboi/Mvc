@@ -87,6 +87,9 @@ namespace Microsoft.AspNetCore.Builder
                     "ConfigureServices(...)"));
             }
 
+            var middlewarePipelineBuilder = app.ApplicationServices.GetRequiredService<MiddlewarePipelineBuilderService>();
+            middlewarePipelineBuilder.ApplicationBuilder = app;
+
             var routes = new RouteBuilder(app)
             {
                 DefaultHandler = app.ApplicationServices.GetRequiredService<MvcRouteHandler>(),
@@ -118,12 +121,6 @@ namespace Microsoft.AspNetCore.Builder
             {
                 throw new ArgumentNullException(nameof(configureRoutes));
             }
-
-            var nestedAppBuilder = app.New();
-            middlewarePipeline(nestedAppBuilder);
-
-            var options = app.ApplicationServices.GetRequiredService<IOptions<MvcOptions>>();
-            options.Value.Filters.Add(new MiddlewarePipelineResourceFilter(nestedAppBuilder));
 
             // Verify if AddMvc was done before calling UseMvc
             // We use the MvcMarkerService to make sure if all the services were added.

@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Mvc.Core;
+using Microsoft.AspNetCore.Builder.Internal;
 
 namespace MvcSandbox
 {
@@ -32,36 +34,12 @@ namespace MvcSandbox
             app.UseDeveloperExceptionPage();
             app.UseStaticFiles();
             loggerFactory.AddConsole(LogLevel.Debug);
-            //app.UseMvc(routes =>
-            //{
-            //    routes.MapRoute(
-            //        name: "default",
-            //        template: "{controller=Home}/{action=Index}/{id?}");
-            //});
-
-            app.UseMvcWithMiddleware(
-                (nestedAppBuilder) =>
-                {
-                    nestedAppBuilder.Use(async (httpContext, next) =>
-                    {
-                        Console.WriteLine("Use1-Request");
-                        await next();
-                        Console.WriteLine("Use1-Response");
-                    });
-
-                    nestedAppBuilder.Use(async (httpContext, next) =>
-                    {
-                        Console.WriteLine("Use2-Request");
-                        await next();
-                        Console.WriteLine("Use2-Response");
-                    });
-                },
-                routes =>
-                {
-                    routes.MapRoute(
-                        name: "default",
-                        template: "{controller=Home}/{action=Index}/{id?}");
-                });
+            app.UseMvc(routes =>
+            {
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Home}/{action=Index}/{id?}");
+            });
         }
 
         public static void Main(string[] args)
