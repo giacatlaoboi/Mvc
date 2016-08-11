@@ -101,47 +101,5 @@ namespace Microsoft.AspNetCore.Builder
 
             return app.UseRouter(routes.Build());
         }
-
-        public static IApplicationBuilder UseMvcWithMiddleware(
-            this IApplicationBuilder app,
-            Action<IApplicationBuilder> middlewarePipeline,
-            Action<IRouteBuilder> configureRoutes)
-        {
-            if (app == null)
-            {
-                throw new ArgumentNullException(nameof(app));
-            }
-
-            if (middlewarePipeline == null)
-            {
-                throw new ArgumentNullException(nameof(middlewarePipeline));
-            }
-
-            if (configureRoutes == null)
-            {
-                throw new ArgumentNullException(nameof(configureRoutes));
-            }
-
-            // Verify if AddMvc was done before calling UseMvc
-            // We use the MvcMarkerService to make sure if all the services were added.
-            if (app.ApplicationServices.GetService(typeof(MvcMarkerService)) == null)
-            {
-                throw new InvalidOperationException(Resources.FormatUnableToFindServices(
-                    nameof(IServiceCollection),
-                    "AddMvc",
-                    "ConfigureServices(...)"));
-            }
-
-            var routes = new RouteBuilder(app)
-            {
-                DefaultHandler = app.ApplicationServices.GetRequiredService<MvcRouteHandler>(),
-            };
-
-            configureRoutes(routes);
-
-            routes.Routes.Insert(0, AttributeRouting.CreateAttributeMegaRoute(app.ApplicationServices));
-
-            return app.UseRouter(routes.Build());
-        }
     }
 }
