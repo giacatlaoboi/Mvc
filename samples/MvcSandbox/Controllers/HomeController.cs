@@ -10,20 +10,20 @@ namespace MvcSandbox.Controllers
 {
     public class HomeController : Controller
     {
-        [MiddlewarePipelineResourceFilter(typeof(Pipeline1))]
+        [MiddlewareFilter(typeof(Pipeline1))]
         public IActionResult Index()
         {
             return Content("Home.Index");
         }
 
-        [MiddlewarePipelineResourceFilter(typeof(Pipeline2))]
+        [MiddlewareFilter(typeof(Pipeline2))]
         public IActionResult Contact()
         {
             return Content("Home.Contact");
         }
     }
 
-    [MiddlewarePipelineResourceFilter(typeof(Pipeline2))]
+    [MiddlewareFilter(typeof(Pipeline2))]
     public class FooController : Controller
     {
         public IActionResult Index()
@@ -34,7 +34,7 @@ namespace MvcSandbox.Controllers
 
     public class Pipeline1 : IMiddlewarePipelineProvider
     {
-        public void GetPipeline(IApplicationBuilder applicationBuilder)
+        public void Configure(IApplicationBuilder applicationBuilder)
         {
             applicationBuilder.Use(async (httpContext, next) =>
             {
@@ -54,7 +54,7 @@ namespace MvcSandbox.Controllers
 
     public class Pipeline2 : IMiddlewarePipelineProvider
     {
-        public void GetPipeline(IApplicationBuilder applicationBuilder)
+        public void Configure(IApplicationBuilder applicationBuilder)
         {
             applicationBuilder.Use(async (httpContext, next) =>
             {

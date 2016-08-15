@@ -1,22 +1,22 @@
 ﻿using System;
-using System.Reflection;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace Microsoft.AspNetCore.Mvc.Core.Filters
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public class MiddlewarePipelineResourceFilterAttribute : Attribute, IFilterFactory, IOrderedFilter
+    public class MiddlewareFilterAttribute : Attribute, IFilterFactory, IOrderedFilter
     {
-        public MiddlewarePipelineResourceFilterAttribute(Type type)
+        public MiddlewareFilterAttribute(Type type)
         {
             if (type == null)
             {
                 throw new ArgumentNullException(nameof(type));
             }
 
-            if (!typeof(IMiddlewarePipelineProvider).IsAssignableFrom(type))
+            if (!typeof(IMiddlewarePipelineProvider).GetTypeInfo().IsAssignableFrom(type))
             {
                 throw new ArgumentException(
                     $"Supplied type {type} must implement {typeof(IMiddlewarePipelineProvider).ToString()}");
@@ -41,7 +41,7 @@ namespace Microsoft.AspNetCore.Mvc.Core.Filters
             var middlewarePipelineService = serviceProvider.GetRequiredService<MiddlewarePipelineBuilderService>();
             var pipeline = middlewarePipelineService.GetPipeline(ImplementationType);
 
-            return new MiddlewarePipelineResourceFilter(pipeline);
+            return new MiddlewareFilter(pipeline);
         }
     }
 }

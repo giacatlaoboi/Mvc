@@ -4,6 +4,6 @@ namespace Microsoft.AspNetCore.Mvc
 {
     public interface IMiddlewarePipelineProvider
     {
-        void GetPipeline(IApplicationBuilder applicationBuilder);
+        void Configure(IApplicationBuilder applicationBuilder);
     }
 }
